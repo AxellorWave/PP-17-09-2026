@@ -103,7 +103,25 @@ double zharov::area(double r, size_t threads, size_t tests)
 
 void* zharov::worker(void* data)
 {
-  auto* task = static_cast<Task*>(data);
+  auto* task = static_cast< Task* >(data);
   task->inside = calc(task->r, task->tests, task->seed);
   return nullptr;
+}
+
+size_t zharov::calc(double r, size_t tests, size_t seed)
+{
+  std::default_random_engine eng(seed);
+  std::uniform_real_distribution< double > dist(-r, r);
+  size_t res = 0;
+  for (size_t i = 0; i < tests; ++i)
+  {
+    res+=isInside(dist(eng), dist(eng), r);
+  }
+
+  return res;
+}
+
+bool zharov::isInside(double x, double y, double r)
+{
+  return x * x + y * y <= r * r;
 }
