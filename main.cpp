@@ -67,19 +67,19 @@ int main(int argc, char** argv)
   }
 }
 
-double area(double r, size_t threads, size_t tests)
+double zharov::area(double r, size_t threads, size_t tests)
 {
   size_t base = tests / threads;
   size_t rest = tests % threads;
   std::vector< pthread_t > ths(threads);
-  std::vector< zharov::Task > tasks(threads);
+  std::vector< Task > tasks(threads);
 
   size_t created = 0, completed = 0;
-  zharov::THGuard thg {ths, created, completed};
+  THGuard thg {ths, created, completed};
   for (; created < threads; ++created)
   {
     tasks[created] = {r, base + (created < rest ? 1 : 0), created, 0};
-    int err = pthread_create(&ths[created], nullptr, zharov::worker, &tasks[created]);
+    int err = pthread_create(&ths[created], nullptr, worker, &tasks[created]);
     if (err != 0)
     {
       throw std::runtime_error(strerror(err));
@@ -99,4 +99,11 @@ double area(double r, size_t threads, size_t tests)
 
   return (4 * r * r) * inside / tests;
 
+}
+
+void* zharov::worker(void* data)
+{
+  auto* task = static_cast<Task*>(data);
+  task->inside = calc(task->r, task->tests, task->seed);
+  return nullptr;
 }
