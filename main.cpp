@@ -2,6 +2,7 @@
 #include <random>
 #include <pthread.h>
 #include <vector>
+#include <string.h>
 
 namespace zharov
 {
@@ -13,7 +14,22 @@ namespace zharov
     size_t inside;
   };
 
-  double area(double r, size_t threds, size_t tests);
+  struct THGuard
+  {
+    std::vector< pthread_t >& ths;
+    size_t& created;
+    size_t& completed;
+
+    ~THGuard()
+    {
+      for (size_t i = completed; i < created; ++i)
+      {
+        pthread_join(ths[i], nullptr);
+      }
+    }
+  };
+
+  double area(double r, size_t threads, size_t tests);
   size_t calc(double r, size_t tests, size_t seed);
   bool isInside(double x, double y, double r);
   void* worker(void* data);
@@ -34,6 +50,11 @@ int main(int argc, char** argv)
     std::cerr << "Args must be positive\n";
     return 1;
   }
+  if (tests < threads)
+  {
+    std::cerr << "Tests must be mire than threads";
+    return 1;
+  }
 
   try
   {
@@ -44,4 +65,38 @@ int main(int argc, char** argv)
     std::cerr << e.what() << "\n";
     return 1;
   }
+}
+
+double area(double r, size_t threads, size_t tests)
+{
+  size_t base = tests / threads;
+  size_t rest = tests % threads;
+  std::vector< pthread_t > ths(threads);
+  std::vector< zharov::Task > tasks(threads);
+
+  size_t created = 0, completed = 0;
+  zharov::THGuard thg {ths, created, completed};
+  for (; created < threads; ++created)
+  {
+    tasks[created] = {r, base + (created < rest ? 1 : 0), created, 0};
+    int err = pthread_create(&ths[created], nullptr, zharov::worker, &tasks[created]);
+    if (err != 0)
+    {
+      throw std::runtime_error(strerror(err));
+    }
+  }
+  size_t inside = 0;
+  for (size_t i = 0; i < created; ++i)
+  {
+    int err = pthread_join(ths[i], nullptr);
+    if (err != 0)
+    {
+      throw std::runtime_error(strerror(err));
+    }
+    ++completed;
+    inside = tasks[i].inside;
+  }
+
+  return (4 * r * r) * inside / tests;
+
 }
