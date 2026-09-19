@@ -94,7 +94,7 @@ double zharov::area(double r, size_t threads, size_t tests)
       throw std::runtime_error(strerror(err));
     }
     ++completed;
-    inside = tasks[i].inside;
+    inside += tasks[i].inside;
   }
 
   return (4 * r * r) * inside / tests;
@@ -115,7 +115,7 @@ size_t zharov::calc(double r, size_t tests, size_t seed)
   size_t res = 0;
   for (size_t i = 0; i < tests; ++i)
   {
-    res+=isInside(dist(eng), dist(eng), r);
+    res += isInside(dist(eng), dist(eng), r);
   }
 
   return res;
